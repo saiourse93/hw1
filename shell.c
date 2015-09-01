@@ -8,6 +8,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <stdbool.h>
+#include <fcntl.h> 
 
 #define INPUT_STRING_SIZE 80
 
@@ -116,7 +117,7 @@ process* create_process(char* inputString)
   /** YOUR CODE HERE */
   return NULL;
 }
-//////////////////////////
+
 char* concat(char *s1, char *s2)
 {
   char *result = malloc(strlen(s1)+strlen(s2)+1);//+1 for the zero-terminator
@@ -125,7 +126,50 @@ char* concat(char *s1, char *s2)
   strcat(result, s2);
   return result;
 }
-///////////////////////
+void part2(tok_t * t){
+    execv(*t,t);
+      perror(*t);
+      exit(0);
+}
+void part3(tok_t *t){
+  char *poi=getenv("PATH");
+      tok_t * pois = getToks(poi);
+      int i;
+      for(i = 0;i<MAXTOKS && pois[i];i++){
+        //char *( char *pois, *t);
+        char *fi=concat(pois[i],"/");
+        fi=concat(fi,t[0]);
+        if(access(fi,F_OK) != -1){
+          execve(fi,t, NULL);
+         printf("%s \n",fi);
+        }
+        //perror(*t);
+      }
+}
+void part4(tok_t *input,char * filename,char * c){
+int newfd;
+ 
+ if(c == ">"){
+  //printf("PART 4\n");
+  if ((newfd = open(filename, O_CREAT|O_WRONLY | O_APPEND, 0644)) < 0) {
+	perror(input);
+	exit(1);
+  }
+ 
+ dup2(newfd, 1);
+ close(newfd);
+ }
+ if(c == "<"){
+  if ((newfd = open(filename, O_RDONLY, 0644)) < 0) {
+	perror(input);
+	exit(1);
+  }
+ dup2(newfd,0);
+ close(newfd);
+ }
+  part3(input);
+  part2(input);
+}
 int shell (int argc, char *argv[]) {
   char *s = malloc(INPUT_STRING_SIZE+1);			/* user input string */
   tok_t *t;			/* tokens parsed from input */
@@ -150,25 +194,23 @@ int shell (int argc, char *argv[]) {
     pid = fork(); 
     
     if( pid == 0 ){ // child process
- ///////////////////////////////////
-      
-      char *poi=getenv("PATH"); //(LIST)getting the path/folders that contain the basic functions from the terminal
-      tok_t * arrayPointers = getToks(poi); //(ARRAY)splits the above path by a colon(:) and creates and array
-      int i;
-      for(i = 0;i<MAXTOKS && arrayPointers[i];i++){ //MAXTOKS=everything in the array plus the next pointer which is NULL. arrayPointer[i] stops when the next item=NULL.
-      //fi= the string being concatenated
-        char *fi=concat(arrayPointers[i],"/"); // for every item in the array add "/"
-        fi=concat(fi,t[0]); // we insert/use the function called from the terminal
-        if(access(fi,F_OK) != -1){ // if that certain function exists in the folder, the execute that function
-          execve(fi,t, NULL); //execution fi=folder t=function execve = execute and exit
-        }
-////////////////////////////////////
-        //perror(*t);
-      }
-      execv(*t,t);
-      perror(*t);
-      exit(0);
-      
+     // printf("%d\n", strlen(strstr(s,">")));
+         int i;
+         for(i=0;i<MAXTOKS && t[i];i++){
+		 if (strcmp( t[i], ">") == 0){
+	 	  t[i]=NULL;
+		  //printf("hello");
+		  part4(t,t[i+1],">");	
+                  }
+		if (strcmp( t[i], "<") == 0){
+	 	  t[i]=NULL;
+		  //printf("hello");
+		  part4(t,t[i+1],"<");	
+                  }
+		}
+      part3(t);
+      part2(t);
+
     }else if(pid<0){
       perror( "Fork failed" );
       exit( EXIT_FAILURE );    
